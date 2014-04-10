@@ -1,5 +1,6 @@
 module Minimize where
 
+import Data.List (isInfixOf)
 import Data.Set (Set)
 import qualified Data.Set as Set
 
@@ -18,8 +19,17 @@ type Final = State -> Bool
 data DFA = DFA Q Language Delta StartState EndStates
 
 instance Show DFA where
-  show (DFA q lang delta start ends) = show [q, lang, [start], ends]
+  show (DFA q lang delta start ends) = table q (langToAlpha lang) delta start ends
 
+header :: Alphabet -> String
+header alphabet = header' ++ "\n" ++ replicate 50 '-'
+  where header' = "\t" ++ concat ["\t|\t" ++ [x]| x <- alphabet]
+
+row :: State -> Alphabet -> Delta -> StartState -> EndStates -> String
+row state alphabet delta startState ends = "\t" ++ concat ["->" | state == startState] ++ ['*' | isInfixOf [state] ends] ++ state ++ concat ["\t|\t" ++ delta state a | a <- alphabet]
+
+table :: Q -> Alphabet -> Delta -> StartState -> EndStates -> String
+table q alphabet delta startState ends = header alphabet ++ "\n" ++ concat [row state alphabet delta startState ends ++ "\n" | state <- q]
 
 -- For testing
 delta state char
@@ -70,5 +80,5 @@ minimize (DFA q lang delta start ends) = DFA newQ lang newDelta newStart newEnds
         newQ = toStr part
         newStart = concat $ concat $ filter (elem start) part
         newEnds = toStr $ Set.toList $ Set.fromList [x | x <- part, a <- ends, elem a x == True]
-        newDelta state char = concat $ toStr [x | x <- part, elem (delta state char) x == True]
+        newDelta state char = concat $ toStr [x | x <- part, elem (delta (take 2 state) char) x == True]
         toStr x = map (filter (/= ' ')) $ map unwords x
