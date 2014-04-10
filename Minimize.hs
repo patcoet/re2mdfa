@@ -15,10 +15,10 @@ type Alphabet = [Char]
 type Final = State -> Bool
 
 -- Is this taking a Language correct?
-data FSA = FSA Q Language Delta StartState EndStates
+data DFA = DFA Q Language Delta StartState EndStates
 
-instance Show FSA where
-  show (FSA q lang delta start ends) = show [q, lang, [start], ends]
+instance Show DFA where
+  show (DFA q lang delta start ends) = show [q, lang, [start], ends]
 
 
 -- For testing
@@ -45,7 +45,7 @@ language = ["hello", "bullwhip", "oranges", "cellar"]
 
 begin = "q0"
 
-fsa = FSA q ["ab"] delta begin ends
+dfa = DFA q ["ab"] delta begin ends
 --
 
 langToAlpha :: Language -> Alphabet
@@ -59,14 +59,14 @@ distinguishable s1 s2 ends delta alphabet
       distinguishable (delta s1 a) (delta s2 a) ends delta alphabet == True]
   where f state = not $ null (filter (== state) ends)
 
-partition :: FSA -> [[State]]
-partition (FSA q lang delta start ends) = Set.toList $ Set.fromList [Set.toList $ snd $ Set.partition (d x) (Set.fromList q) | x <- q]
+partition :: DFA -> [[State]]
+partition (DFA q lang delta start ends) = Set.toList $ Set.fromList [Set.toList $ snd $ Set.partition (d x) (Set.fromList q) | x <- q]
   where d x y = distinguishable x y ends delta alphabet
 
-minimize :: FSA -> FSA
-minimize (FSA q lang delta start ends) = FSA newQ lang newDelta newStart newEnds
-  where fsa = (FSA q lang delta start ends)
-        part = partition fsa
+minimize :: DFA -> DFA
+minimize (DFA q lang delta start ends) = DFA newQ lang newDelta newStart newEnds
+  where dfa = (DFA q lang delta start ends)
+        part = partition dfa
         newQ = toStr part
         newStart = concat $ concat $ filter (elem start) part
         newEnds = toStr $ Set.toList $ Set.fromList [x | x <- part, a <- ends, elem a x == True]
