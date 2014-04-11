@@ -1,84 +1,28 @@
 module Minimize where
 
-import Data.List (isInfixOf)
 import Data.Set (Set)
-import qualified Data.Set as Set
+import qualified Data.Set as Set (Set, fromList, partition, toList)
 
-type State = String
-type Q = [State]
-type Language = [String]
-type Delta = State -> Char -> State
-type StartState = State
-type EndStates = [State]
-
-type Alphabet = [Char]
-
-type Final = State -> Bool
-
--- Is this taking a Language correct?
-data DFA = DFA Q Language Delta StartState EndStates
-
-instance Show DFA where
-  show (DFA q lang delta start ends) = table q (langToAlpha lang) delta start ends
-
-header :: Alphabet -> String
-header alphabet = header' ++ "\n" ++ replicate 50 '-'
-  where header' = "\t" ++ concat ["\t|\t" ++ [x]| x <- alphabet]
-
-row :: State -> Alphabet -> Delta -> StartState -> EndStates -> String
-row state alphabet delta startState ends = "\t" ++ concat ["->" | state == startState] ++ ['*' | isInfixOf [state] ends] ++ state ++ concat ["\t|\t" ++ delta state a | a <- alphabet]
-
-table :: Q -> Alphabet -> Delta -> StartState -> EndStates -> String
-table q alphabet delta startState ends = header alphabet ++ "\n" ++ concat [row state alphabet delta startState ends ++ "\n" | state <- q]
-
--- For testing
-delta state char
-  | state == "q0" && char == 'a' = "q1"
-  | state == "q0" && char == 'b' = "q2"
-  | (state == "q1" || state == "q2") && char == 'a' = "q3"
-  | (state == "q1" || state == "q2") && char == 'b' = "q4"
-  | (state == "q3" || state == "q4") = "q5"
-  | state == "q5" = "q5"
-
-minDelta state char
-  | state == "q0" = "q1q2"
-  | state == "q1q2" = "q3q4"
-  | state == "q5" = "q5"
-
-alphabet = "ab"
-
-ends = ["q1", "q2", "q5"]
-
-q = ["q0", "q1", "q2", "q3", "q4", "q5"]
-
-language = ["hello", "bullwhip", "oranges", "cellar"]
-
-begin = "q0"
-
-dfa = DFA q ["ab"] delta begin ends
---
-
-langToAlpha :: Language -> Alphabet
-langToAlpha = Set.toList . Set.fromList . Prelude.filter (/= ' ') . unwords
+import FA
 
 distinguishable :: State -> State -> EndStates -> Delta -> Alphabet -> Bool
 distinguishable s1 s2 ends delta alphabet
   | s1 == s2 = False
   | f s1 /= f s2 = True
-  | otherwise = not $ null [a | a <- alphabet,
-      distinguishable (delta s1 a) (delta s2 a) ends delta alphabet == True]
+  | otherwise = not $ null [a | a <- (Set.toList alphabet),
+      distinguishable (concat (delta s1 a)) (concat (delta s2 a)) ends delta alphabet == True]
   where f state = not $ null (filter (== state) ends)
 
-partition :: DFA -> [[State]]
-partition (DFA q lang delta start ends) = Set.toList $ Set.fromList [Set.toList $ snd $ Set.partition (d x) (Set.fromList q) | x <- q]
-  where d x y = distinguishable x y ends delta alphabet
+partition :: FA -> [[State]]
+partition (FA q alpha delta start ends) = Set.toList $ Set.fromList [Set.toList $ snd $ Set.partition (d x) (Set.fromList q) | x <- q]
+  where d x y = distinguishable x y ends delta alpha
 
-minimize :: DFA -> DFA
-minimize (DFA q lang delta start ends) = DFA newQ lang newDelta newStart newEnds
-  where dfa = (DFA q lang delta start ends)
-        part = partition dfa
+minimize :: FA -> FA
+minimize (FA q alpha delta start ends) = FA newQ alpha newDelta newStart newEnds
+  where fa = (FA q alpha delta start ends)
+        part = partition fa
         newQ = toStr part
         newStart = concat $ concat $ filter (elem start) part
         newEnds = toStr $ Set.toList $ Set.fromList [x | x <- part, a <- ends, elem a x == True]
-        newDelta state char = concat $ toStr [x | x <- part, elem (delta (take 2 state) char) x == True]
+        newDelta state char = toStr [x | x <- part, elem (concat (delta (take 4 state) char)) x == True]
         toStr x = map (filter (/= ' ')) $ map unwords x
