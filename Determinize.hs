@@ -1,38 +1,30 @@
 module Determinize where
 
 import Control.Monad (filterM)
-import qualified Data.Set as Set (delete, singleton)
+import qualified Data.Set as Set
+  (Set, delete, empty, findMin, fromList, map, singleton, toList, union, unions)
 
 import FA
 
--- Turn e-NFA into DFA
--- determinize :: 
+closure :: Delta -> State -> Set.Set State
+closure delta state = closure' delta (Set.singleton state)
 
--- closure :: State -> Delta -> [State]
--- closure state delta = [state] ++ (delta state 'ε')
+closure' :: Delta -> Set.Set State -> Set.Set State
+closure' delta states
+  | states == Set.empty = states
+  | otherwise = Set.union states $
+    closure' delta (Set.fromList [p | p <- Set.toList $ delta' 'ε'])
+  where delta' char = Set.unions
+          $ Set.toList $ Set.map (\x -> delta x char) states
 
--- delta' :: State -> [Char] -> Delta -> [State]
--- delta' state (c:hars) delta
-  -- | length (c:hars) == 1 = delta state c
-  -- | otherwise = delta state c ++ delta' (concat (delta state c)) hars delta
-
--- delta' state (c:hars) delta
-  -- | delta 
-
-
--- delta' :: Delta -> [State] -> Char -> [[State]]
--- delta' delta states char = [delta state char | state <- states]
-  
-closure :: Delta -> [State] -> [State]
-closure delta [] = []
-closure delta states = states ++ closure delta (concat [p | p <- delta' 'ε'])
-  where delta' char = [delta state char | state <- states]
-
+-- Turn ε-NFA into DFA
 determinize :: FA -> FA
-determinize nfa = FA q' alpha' delta' startState' endStates'
-  where pow = filterM (const [True, False]) -- ?????????????
-        q' = concat [closure (delta nfa) s | s <- pow (q nfa)]
-        alpha' = Set.delete 'ε' (alpha nfa)
-        delta' = delta nfa
-        startState' = concat $ closure (delta nfa) [startState nfa]
-        endStates' = endStates nfa
+determinize (FA q alpha delta start ends)
+  = FA q' alpha' delta start endStates'
+  where pow = filterM (const [True, False]) . Set.toList -- ????
+        -- q' = Set.fromList [closure (delta) (Set.fromList s) | s <- pow (q)]
+        q' = Set.unions [closure delta (head s) | s <- pow q]
+        alpha' = Set.delete 'ε' (alpha)
+        -- delta' state char = closure (delta nfa) $ Set.fromList [Set.findMin $ (delta nfa) state char]
+        -- startState' = Set.findMin $ closure (delta nfa) (Set.singleton (startState nfa))
+        endStates' = ends

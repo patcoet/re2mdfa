@@ -1,10 +1,12 @@
 module FA where
 
-import Text.PrettyPrint.Boxes (Box, center1, char, hsep, left, render, text, vcat)
+import Text.PrettyPrint.Boxes
+  (Box, center1, char, hsep, left, render, text, vcat)
 import Data.List (isInfixOf)
-import qualified Data.Set as Set (Set, member, findMax, findMin, fromList, singleton, toList)
+import qualified Data.Set as Set
+  (Set, member, findMax, findMin, fromList, map, singleton, toList)
 
-type State = Int
+type State = Set.Set Int
 type Q = Set.Set State
 type Delta = State -> Char -> Set.Set State
 type StartState = State
@@ -23,18 +25,18 @@ data FA = FA {q :: Q,
 -- Make sure state names don't overlap
 rename :: (FA, FA) -> (FA, FA)
 rename (fa1, fa2)
-  | Set.findMax (q fa1) >= Set.findMin (q fa2)
-              = (fa1, FA q2' (alpha fa2) d2' start2' end2')
+  | Set.findMax (q1) >= Set.findMin (q2)
+              = (fa1, FA (q2') (alpha fa2) d2' start2' end2')
   | otherwise = (fa1, fa2)
-  where add x s         = Set.fromList $ map (+ x) $ Set.toList s
-        q1              = q fa1
-        q2              = q fa2
-        diff            = Set.findMax q1 + 1 - Set.findMin q2
-        q2'             = add diff q2
-        d2 state char   = (delta fa2) (state - diff) char
-        d2' state char  = add diff (d2 state char)
-        start2'         = startState fa2 + diff
-        end2'           = add diff (endStates fa2)
+  where add x          = Set.map (+ x)
+        q1             = Set.findMin $ q fa1
+        q2             = Set.findMin $ q fa2
+        diff           = Set.findMax q1 + 1 - Set.findMin q2
+        q2'            = Set.singleton $ add diff q2
+        d2 state char  = (delta fa2) (Set.map (diff -) (Set.singleton state)) char
+        d2' state char = Set.map (add diff) (d2 (Set.findMin state) char)
+        start2'        = Set.map (diff +) (startState fa2)
+        end2'          = Set.map (add diff) (endStates fa2)
 
 -- Display stuff; should maybe be in Main instead
 -- TODO: Change displayed state names to look nicer? As an option in main?
@@ -55,20 +57,23 @@ instance Show FA where
 
 
 -- For testing
+mydelta :: Delta
 mydelta state char
-  | state == 0 && char == 'a' = Set.singleton 1
-  | state == 0 && char == 'b' = Set.singleton 2
-  | (state == 1 || state == 2) && char == 'a' = Set.singleton 3
-  | (state == 1 || state == 2) && char == 'b' = Set.singleton 4
-  | (state == 3 || state == 4) = Set.singleton 5
-  | state == 5 = Set.singleton 5
+  | state' == 0 && char == 'a' = a 1
+  | state' == 0 && char == 'b' = a 2
+  | (state' == 1 || state' == 2) && char == 'a' = a 3
+  | (state' == 1 || state' == 2) && char == 'b' = a 4
+  | (state' == 3 || state' == 4) = a 5
+  | state' == 5 = a 5
+  where state' = Set.findMin state
+        a n = Set.singleton $ Set.singleton n
 
 myalphabet = Set.fromList ['a', 'b']
 
-myends = Set.fromList [1, 2, 5]
+myends = Set.singleton $ Set.fromList [1, 2, 5]
 
-myq = Set.fromList [0 .. 5]
+myq = Set.singleton $ Set.fromList [0 .. 5]
 
-mybegin = 0
+mybegin = Set.singleton 0
 
 mydfa = FA myq myalphabet mydelta mybegin myends
