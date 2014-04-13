@@ -2,7 +2,7 @@ module Determinize where
 
 import Control.Monad (filterM)
 import qualified Data.Set as Set
-  (Set, delete, empty, findMin, fromList, map, singleton, toList, union, unions)
+  (Set, delete, difference, empty, filter, findMin, fromList, intersection, map, singleton, toList, union, unions)
 
 import FA
 
@@ -13,18 +13,18 @@ closure' :: Delta -> Set.Set State -> Set.Set State
 closure' delta states
   | states == Set.empty = states
   | otherwise = Set.union states $
-    closure' delta (Set.fromList [p | p <- Set.toList $ delta' 'ε'])
-  where delta' char = Set.unions
-          $ Set.toList $ Set.map (\x -> delta x char) states
+    closure' delta $ Set.difference (Set.fromList [p | p <- delta' 'ε']) states
+  where delta' char = Set.toList $ Set.map (\x -> delta x char) states
 
 -- Turn ε-NFA into DFA
 determinize :: FA -> FA
-determinize (FA q alpha delta start ends)
-  = FA q' alpha' delta start endStates'
+determinize (FA q alpha delta start ends) = FA q' alpha' delta' start' ends'
   where pow = filterM (const [True, False]) . Set.toList -- ????
-        -- q' = Set.fromList [closure (delta) (Set.fromList s) | s <- pow (q)]
-        q' = Set.unions [closure delta (head s) | s <- pow q]
+        q' = Set.unions [Set.filter (/= Set.empty) $ closure delta (head s) | s <- pow q, s /= []]
         alpha' = Set.delete 'ε' (alpha)
-        -- delta' state char = closure (delta nfa) $ Set.fromList [Set.findMin $ (delta nfa) state char]
-        -- startState' = Set.findMin $ closure (delta nfa) (Set.singleton (startState nfa))
-        endStates' = ends
+        delta' state char = Set.unions $ Set.toList $ closure delta
+          (Set.unions [delta (Set.singleton s) char | s <- Set.toList state])
+        start' = Set.unions $ Set.toList $ closure delta start
+        ends' = Set.fromList
+          [s | s <- Set.toList q', end <- Set.toList ends,
+          Set.intersection s end /= Set.empty]
