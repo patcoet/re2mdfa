@@ -31,7 +31,7 @@ leftCol q startState ends = vcat left $ [text ""]
 table :: FA -> [Box]
 table (FA q alphabet delta startState endStates) = [vcat left $ [char a] ++ 
   [text $ toString (delta x a) | x <- Set.toList q] | a <- Set.toList alphabet]
-  where toString s = concat $ map show $ Set.toList s
+  where toString s = show $ Set.toList s
 
 instance Show FA where
   show (FA q alpha delta start ends) = render $ hsep 3 center1 $

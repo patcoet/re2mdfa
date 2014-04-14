@@ -25,8 +25,8 @@ rename (fa1, fa2)
         merge          = Set.unions . Set.toList
         diff           = Set.findMax (merge q1) + 1 - Set.findMin (merge q2)
         q2'            = add diff q2
-        d2 state char  = (delta fa2) (merge $ add diff (Set.singleton state)) char
-        d2' state char = merge $ add (-diff) (Set.singleton (d2 state char))
+        d2 state char  = (delta fa2) (merge $ add (-diff) (Set.singleton state)) char
+        d2' state char = merge $ add diff (Set.singleton (d2 state char))
         start2'        = merge $ add diff $ Set.singleton (startState fa2)
         end2'          = add diff (endStates fa2)
 
@@ -44,41 +44,42 @@ construct (Atom a) = construct' q (Set.singleton a) d 0 (Set.singleton 1)
           | state == Set.singleton 0 && char == a = Set.singleton 1
           | otherwise = Set.empty
 
--- construct (Plus r s) = construct' q' alpha' delta' (highest+1) (Set.singleton (highest+2))
-  -- where (consr, conss) = rename (construct r, construct s)
-        -- highest = Set.findMax (Set.union (Set.findMax $ q consr) (Set.findMax $ q conss))
-        -- q' = Set.unions [Set.findMax $ q consr, Set.findMax $ q conss, Set.singleton (highest+1), Set.singleton (highest+2)]
-        -- alpha' = Set.union (alpha consr) (alpha conss)
-        -- delta' state symbol
-          -- | state == Set.singleton (highest+1) && symbol == 'ε'
-              -- = Set.fromList [startState consr, startState conss]
-          -- | Set.member state (Set.union (endStates consr) (endStates conss))
-              -- && symbol == 'ε' = Set.singleton $ Set.singleton (highest + 2)
-          -- | Set.member state (q consr) = (delta consr) state symbol
-          -- | otherwise = (delta conss) state symbol
+construct (Plus r s) = FA q' alpha' delta' (start') (Set.singleton end')
+  where (r', s') = rename (construct r, construct s)
+        highest x = Set.map (x +) $ Set.findMax $ q s'
+        start' = highest 1
+        end' = highest 2
+        q' = Set.unions [q r', q s', Set.singleton start', Set.singleton end']
+        alpha' = Set.unions [alpha r', alpha s', Set.singleton 'ε']
+        delta' state char
+          | state == start' && char == 'ε'
+              = Set.union (startState r') (startState s')
+          | Set.member state (Set.union (endStates r') (endStates s'))
+              && char == 'ε' = end'
+          | Set.member state (q r') = (delta r') state char
+          | otherwise = (delta s') state char
 
--- construct (Concat r s)
-  -- = construct' q' alpha' delta' (startState' consr) (endStates' conss)
-  -- where (consr, conss) = rename (construct r, construct s)
-        -- q' = Set.union (Set.findMax $ q consr) (Set.findMax $ q conss)
-        -- alpha' = Set.unions [alpha consr, alpha conss, Set.singleton 'ε']
-        -- delta' state symbol
-          -- | Set.member state (endStates consr) && symbol == 'ε' = Set.singleton $ startState conss
-          -- | Set.member state (q consr) = (delta consr) state symbol
-          -- | otherwise = (delta conss) state symbol
-        -- startState' = Set.findMax . startState
-        -- endStates' = Set.unions . Set.toList . endStates
+construct (Concat r s) = FA q' alpha' delta' (startState r') (endStates s')
+  where (r', s') = rename (construct r, construct s)
+        q' = Set.union (q r') (q s')
+        alpha' = Set.unions [alpha r', alpha s', Set.singleton 'ε']
+        delta' state char
+          | Set.member state (endStates r') && char == 'ε' = startState s'
+          | Set.member state (q r') = (delta r') state char
+          | otherwise = (delta s') state char
 
--- construct (Star r) = construct' q' alpha' delta' (highest+1) (Set.singleton (highest+2))
-  -- where consr = construct r
-        -- highest = Set.findMax (Set.findMax $ q consr)
-        -- q' = Set.unions [Set.findMax $ q consr, Set.singleton (highest+1), Set.singleton (highest+2)]
-        -- alpha' = Set.union (alpha consr) (Set.singleton 'ε')
-        -- delta' state symbol
-          -- | (Set.member state (endStates consr) || state == Set.singleton (highest+1))
-              -- && symbol == 'ε' = Set.singleton $ Set.fromList [highest+2, 0]
-          -- | state == Set.singleton (highest+2) || symbol == 'ε' = Set.singleton $ Set.empty
-          -- | otherwise = (delta consr) state symbol
+construct (Star r) = FA q' alpha' delta' start' (Set.singleton end')
+  where r' = construct r
+        highest x = Set.map (x +) $ Set.findMax $ q r'
+        start' = highest 1
+        end' = highest 2
+        q' = Set.unions [q r', Set.singleton start', Set.singleton end']
+        alpha' = Set.union (alpha r') (Set.singleton 'ε')
+        delta' state char
+          | (Set.member state (endStates r') || state == start')
+              && char == 'ε' = Set.union end' (Set.singleton 0)
+          | state == end' || char == 'ε' = Set.empty
+          | otherwise = (delta r') state char
 
 construct' q alpha delta startState endStates
   = FA q alpha delta (Set.singleton startState) (Set.singleton endStates)

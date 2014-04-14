@@ -20,7 +20,7 @@ closure' delta states
 determinize :: FA -> FA
 determinize (FA q alpha delta start ends) = FA q' alpha' delta' start' ends'
   where pow = filterM (const [True, False]) . Set.toList -- ????
-        q' = Set.unions [Set.filter (/= Set.empty) $ closure delta (head s) | s <- pow q, s /= []]
+        q' = Set.map Set.unions $ Set.map Set.toList $ Set.fromList [Set.filter (/= Set.empty) $ closure delta (head s) | s <- pow q, s /= []]
         alpha' = Set.delete 'ε' (alpha)
         delta' state char = Set.unions $ Set.toList $ closure delta
           (Set.unions [delta (Set.singleton s) char | s <- Set.toList state])
