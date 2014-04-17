@@ -2,9 +2,23 @@ module Minimize where
 
 import Data.List (isInfixOf)
 import qualified Data.Set as Set
-  (Set, findMin, fromList, isSubsetOf, member, partition, singleton, toList, unions)
+  (Set, filter, findMin, fromList, isSubsetOf, member, partition, singleton, toList, unions)
 
 import FA
+
+reachedBy :: State -> Delta -> Alphabet -> Set.Set State
+reachedBy state delta alphabet =
+  Set.fromList [delta state c | c <- Set.toList alphabet]
+
+parentsOf :: State -> FA -> Set.Set State
+parentsOf state fa = Set.filter (/= state) $ Set.fromList
+  [p | p <- Set.toList (q fa), Set.member state (reachedBy p (delta fa) (alpha fa))]
+
+reachable :: State -> FA -> Bool
+reachable state fa
+  | state == startState fa = True
+  | otherwise = Set.member state (reachedBy (startState fa) (delta fa) (alpha fa))
+    || or [reachable p fa | p <- Set.toList (parentsOf state fa)]
 
 distinguishable :: State -> State -> EndStates -> Delta -> Alphabet -> Bool
 distinguishable s1 s2 ends delta alphabet
@@ -22,10 +36,11 @@ partition (FA q alpha delta start ends) = Set.fromList
 
 minimize :: FA -> FA
 minimize (FA q alpha delta start ends) = FA q' alpha delta' start' ends'
-  where q' = partition (FA q alpha delta start ends)
+  where fa = FA q alpha delta start ends
+        q' = partition $ FA (Set.filter (\x -> reachable x fa) q) alpha delta start ends
         delta' state char = head
           [p | p <- Set.toList q',
-          isInfixOf (Set.toList $ delta state char) (Set.toList p)]
+          Set.isSubsetOf (delta state char) p]
         start' = head
           [p | p <- Set.toList q', isInfixOf (Set.toList start) (Set.toList p)]
         ends' = Set.fromList

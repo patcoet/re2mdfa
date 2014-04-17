@@ -30,7 +30,7 @@ rename (fa1, fa2)
         start2'        = merge $ add diff $ Set.singleton (startState fa2)
         end2'          = add diff (endStates fa2)
 
--- Constructs a nondeterministic finite automaton with epsilon transitions
+-- Construct an ε-NFA
 construct :: Regex a -> FA
 construct Null = construct' q (Set.singleton 'Φ') d 0 (Set.singleton 1)
   where q = Set.fromList [Set.singleton 0, Set.singleton 1]
