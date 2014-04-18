@@ -1,33 +1,37 @@
 module Determinize where
 
 import Control.Monad (filterM)
-import qualified Data.Set as Set
-  (Set, delete, difference, empty, filter, findMin, fromList, intersection, map,
-  singleton, toList, union, unions)
+import Data.Set (Set, delete, difference, empty, filter, fromList, intersection,
+                map, singleton, toList, union, unions)
+import Prelude hiding (filter, map)
 
 import FA
 
-closure :: Delta -> State -> Set.Set State
-closure delta state = closure' delta (Set.singleton state)
+-- Compute the ε-closure of a state
+closure :: Delta -> State -> Set State
+closure delta state = closure' delta (singleton state)
 
-closure' :: Delta -> Set.Set State -> Set.Set State
+closure' :: Delta -> Set State -> Set State
 closure' delta states
-  | states == Set.empty = states
-  | otherwise = Set.union states $
-    closure' delta $ Set.difference (Set.fromList [p | p <- delta' 'ε']) states
-  where delta' char = Set.toList $ Set.map (\x -> delta x char) states
+  | states == empty = states
+  | otherwise = union states $
+    closure' delta $ difference (fromList [p | p <- delta' 'ε']) states
+  where delta' char = toList $ map (\x -> delta x char) states
 
 -- Turn ε-NFA into DFA
 determinize :: FA -> FA
-determinize (FA q alpha delta start ends) = FA q' alpha' delta' start' ends'
-  where pow = filterM (const [True, False]) . Set.toList -- ????
-        q' = Set.map Set.unions $ Set.map Set.toList $ Set.fromList 
-          [Set.filter (/= Set.empty) $ closure delta (head s)
-          | s <- pow q, s /= []]
-        alpha' = Set.delete 'ε' (alpha)
-        delta' state char = Set.unions $ Set.toList $ closure delta
-          (Set.unions [delta (Set.singleton s) char | s <- Set.toList state])
-        start' = Set.unions $ Set.toList $ closure delta start
-        ends' = Set.fromList
-          [s | s <- Set.toList q', end <- Set.toList ends,
-          Set.intersection s end /= Set.empty]
+determinize (FA q alpha delta start ends) = FA q' alpha' delta'' start' ends'
+  where pow = filterM (const [True, False]) . toList -- ????
+        q' = map unions $ map toList $ fromList 
+          ([filter (/= empty) $ closure delta (head s)
+          | s <- pow q, s /= []] ++ [singleton $ singleton $ -1])
+        alpha' = delete 'ε' (alpha)
+        delta' state char = unions $ toList $ closure delta
+          (unions [delta (singleton s) char | s <- toList state])
+        delta'' state char
+          | delta' state char == empty = singleton (-1)
+          | otherwise = delta' state char
+        start' = unions $ toList $ closure delta start
+        ends' = fromList
+          [s | s <- toList q', end <- toList ends,
+          intersection s end /= empty]

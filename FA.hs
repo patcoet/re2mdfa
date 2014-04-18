@@ -2,16 +2,14 @@ module FA where
 
 import Text.PrettyPrint.Boxes
   (Box, center1, char, hsep, left, render, text, vcat)
-import Data.List (isInfixOf)
-import qualified Data.Set as Set
-  (Set, member, findMin, fromList, map, singleton, toList)
+import Data.Set (Set, member, findMin, fromList, singleton, toList)
 
-type State = Set.Set Int
-type Q = Set.Set State
+type State = Set Int
+type Q = Set State
 type Delta = State -> Char -> State
 type StartState = State
-type EndStates = Set.Set State
-type Alphabet = Set.Set Char
+type EndStates = Set State
+type Alphabet = Set Char
 
 -- Maybe have a DFA type and an NFA type instead?
 data FA = FA {q :: Q,
@@ -25,13 +23,13 @@ data FA = FA {q :: Q,
 leftCol :: Q -> StartState -> EndStates -> Box
 leftCol q startState ends = vcat left $ [text ""]
   ++ map text [(concat ["->" | state == startState])
-  ++ (concat ["*" | Set.member state ends])
-  ++ show (Set.toList state) | state <- Set.toList q]
+  ++ (concat ["*" | member state ends])
+  ++ show (toList state) | state <- toList q]
 
 table :: FA -> [Box]
 table (FA q alphabet delta startState endStates) = [vcat left $ [char a] ++ 
-  [text $ toString (delta x a) | x <- Set.toList q] | a <- Set.toList alphabet]
-  where toString s = show $ Set.toList s
+  [text $ toString (delta x a) | x <- toList q] | a <- toList alphabet]
+  where toString s = show $ toList s
 
 instance Show FA where
   show (FA q alpha delta start ends) = render $ hsep 3 center1 $
@@ -46,15 +44,15 @@ mydelta state char
   | (state' == 1 || state' == 2) && char == 'b' = a 4
   | (state' == 3 || state' == 4) = a 5
   | state' == 5 = a 5
-  where state' = Set.findMin state
-        a n = Set.singleton n
+  where state' = findMin state
+        a n = singleton n
 
-myalphabet = Set.fromList ['a', 'b']
+myalphabet = fromList ['a', 'b']
 
-myends = Set.fromList $ map (Set.singleton) [1, 2, 5]
+myends = fromList $ map (singleton) [1, 2, 5]
 
-myq = Set.fromList $ map (Set.singleton) [0 .. 5]
+myq = fromList $ map (singleton) [0 .. 5]
 
-mybegin = Set.singleton 0
+mybegin = singleton 0
 
 mydfa = FA myq myalphabet mydelta mybegin myends
