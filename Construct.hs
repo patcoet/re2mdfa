@@ -46,7 +46,7 @@ construct (Atom a) = construct' q (singleton a) d 0 (singleton 1)
           | state == singleton 0 && char == a = singleton 1
           | otherwise = empty
 
-construct (Plus r s) = FA q' alpha' delta' (start') (singleton end')
+construct (Plus r s) = FA q' alpha' delta' start' (singleton end')
   where (r', s') = rename (construct r, construct s)
         highest x = map (x +) $ findMax $ q s'
         start' = highest 1
@@ -59,7 +59,8 @@ construct (Plus r s) = FA q' alpha' delta' (start') (singleton end')
           | member state (union (endStates r') (endStates s'))
               && char == 'ε' = end'
           | member state (q r') = (delta r') state char
-          | otherwise = (delta s') state char
+          | member state (q s') = (delta s') state char
+          | otherwise = empty
 
 construct (Concat r s) = FA q' alpha' delta' (startState r') (endStates s')
   where (r', s') = rename (construct r, construct s)
@@ -79,9 +80,9 @@ construct (Star r) = FA q' alpha' delta' start' (singleton end')
         alpha' = union (alpha r') (singleton 'ε')
         delta' state char
           | (member state (endStates r') || state == start')
-              && char == 'ε' = union end' (singleton 0)
-          | state == end' || char == 'ε' = empty
-          | otherwise = (delta r') state char
+              && char == 'ε' = union end' (startState r')
+          | member state (q r') = (delta r') state char
+          | otherwise = empty
 
 construct' q alpha delta startState endStates
   = FA q alpha delta (singleton startState) (singleton endStates)

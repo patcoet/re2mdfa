@@ -15,8 +15,8 @@ closure' :: Delta -> Set State -> Set State
 closure' delta states
   | states == empty = states
   | otherwise = union states $
-    closure' delta $ difference (fromList [p | p <- delta' 'ε']) states
-  where delta' char = toList $ map (\x -> delta x char) states
+    closure' delta $ difference (fromList [p | p <- delta']) states
+  where delta' = toList $ map (\x -> delta x 'ε') states
 
 -- Turn ε-NFA into DFA
 determinize :: FA -> FA
