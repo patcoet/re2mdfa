@@ -90,5 +90,6 @@ construct' q alpha delta startState endStates
 -- Temporary testing helper
 conscat :: [Char] -> Regex a
 conscat (x:xs)
+  | length (x:xs) == 1 = Atom x
   | length xs == 1 = Concat (Atom x) (Atom (head xs))
   | otherwise = Concat (Atom x) (conscat xs)

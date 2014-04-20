@@ -1,6 +1,5 @@
 module Minimize where
 
-import Data.List (isInfixOf)
 import Data.Set
   (Set, filter, fromList, isSubsetOf, member, partition, toList, unions)
 import Prelude hiding (filter)
