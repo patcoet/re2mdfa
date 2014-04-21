@@ -1,8 +1,8 @@
 module Determinize where
 
 import Control.Monad (filterM)
-import Data.Set (Set, delete, difference, empty, filter, fromList, intersection,
-                map, singleton, toList, union, unions)
+import Data.Set (Set, delete, difference, empty, filter, fromList, insert,
+                intersection, map, singleton, toList, union, unions)
 import Prelude hiding (filter, map)
 
 import FA
@@ -17,9 +17,7 @@ closure delta state
 -- ε-NFA -> DFA
 determinize :: FA -> FA
 determinize (FA q alpha delta start ends) = FA q' alpha' delta'' start' ends'
-  where pow = filterM (const [True, False]) . toList -- ????
-        q' = unions $ [map (closure delta) (fromList s) | s <- pow q]
-          ++ [singleton $ singleton (-1)]
+  where q' = insert (singleton (-1)) $ map (closure delta) q
         alpha' = delete 'Φ' $ delete 'ε' alpha
         start' = closure delta start
         ends' = fromList [s | s <- toList q', end <- toList ends,
