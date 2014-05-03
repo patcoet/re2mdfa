@@ -1,24 +1,9 @@
 module Minimize where
 
-import Data.Set
-  (Set, filter, fromList, isSubsetOf, member, partition, toList, unions)
-import Prelude hiding (filter)
+import Data.Set (Set, empty, fromList, insert, isSubsetOf, member, partition,
+                toList, unions)
 
 import FA
-
-reachedBy :: State -> Delta -> Alphabet -> Set State
-reachedBy state delta alphabet =
-  fromList [delta state c | c <- toList alphabet]
-
-parentsOf :: State -> FA -> Set State
-parentsOf state fa = filter (/= state) $ fromList
-  [p | p <- toList (q fa), member state (reachedBy p (delta fa) (alpha fa))]
-
-reachable :: State -> FA -> Bool
-reachable state fa
-  | state == startState fa = True
-  | otherwise = member state (reachedBy (startState fa) (delta fa) (alpha fa))
-    || or [reachable p fa | p <- toList (parentsOf state fa)]
 
 distinguishable :: State -> State -> EndStates -> Delta -> Alphabet -> Bool
 distinguishable s1 s2 ends delta alphabet
@@ -34,10 +19,22 @@ part (FA q alpha delta start ends) = fromList
   [unions $ toList $ snd $ partition (d s) q | s <- toList q]
   where d x y = distinguishable x y ends delta alpha
 
+reachableStates :: FA -> Set State
+reachableStates (FA _ alpha d start _) = reachableStates' d start alpha empty
+
+reachableStates' :: Delta -> State -> Alphabet -> Set State -> Set State
+reachableStates' delta state alphabet visitedStates
+  | member state visitedStates = empty
+  | children == [] = fromList [state]
+  | otherwise = insert state $ unions 
+    [reachableStates' delta child alphabet visitedStates' | child <- children]
+  where children = filter (/= state) [delta state c | c <- toList alphabet]
+        visitedStates' = insert state visitedStates
+
 minimize :: FA -> FA
 minimize (FA q alpha delta start ends) = FA q' alpha delta' start' ends'
   where fa = FA q alpha delta start ends
-        q' = part $ FA (filter (\x -> reachable x fa) q) alpha delta start ends
+        q' = part $ FA (reachableStates fa) alpha delta start ends
         delta' state char = head
           [p | p <- toList q', isSubsetOf (delta state char) p]
         start' = head [p | p <- toList q', isSubsetOf start p]

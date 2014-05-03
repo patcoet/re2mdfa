@@ -1,7 +1,7 @@
 module FA where
 
-import Text.PrettyPrint.Boxes
-  (Box, center1, char, hsep, left, render, text, vcat)
+import Text.PrettyPrint.Boxes (Box, center1, char, hsep, left, render, text,
+                              vcat)
 import Data.Set (Set, member, findMin, fromList, singleton, toList)
 
 type State = Set Int
@@ -37,21 +37,20 @@ instance Show FA where
 
 -- For testing
 mydelta :: Delta
-mydelta state char
-  | state' == 0 && char == 'a' = a 1
-  | state' == 0 && char == 'b' = a 2
-  | (state' == 1 || state' == 2) && char == 'a' = a 3
-  | (state' == 1 || state' == 2) && char == 'b' = a 4
-  | (state' == 3 || state' == 4) = a 5
-  | state' == 5 = a 5
+mydelta state char = singleton result
   where state' = findMin state
-        a n = singleton n
+        result
+          | state' == 0 && char == 'a' = 1
+          | state' == 0 && char == 'b' = 2
+          | (state' == 1 || state' == 2) && char == 'a' = 3
+          | (state' == 1 || state' == 2) && char == 'b' = 4
+          | (state' == 3 || state' == 4 || state' == 5) = 5
 
 myalphabet = fromList ['a', 'b']
 
-myends = fromList $ map (singleton) [1, 2, 5]
+myends = fromList $ map singleton [1, 2, 5]
 
-myq = fromList $ map (singleton) [0 .. 5]
+myq = fromList $ map singleton [0 .. 5]
 
 mybegin = singleton 0
 

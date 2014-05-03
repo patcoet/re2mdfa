@@ -1,9 +1,7 @@
 module Construct where
 
-import Data.List (isInfixOf)
-import Data.Set
-  (Set, empty, findMin, findMax, fromList, map,
-  member, singleton, toList, union, unions)
+import Data.Set (empty, findMin, findMax, fromList, map, member, singleton,
+                toList, union, unions)
 import Prelude hiding (map)
 
 import FA
@@ -39,7 +37,9 @@ construct Null = construct' q (singleton 'Φ') d 0 (singleton 1)
         d = \x y -> empty
 construct Epsilon = construct' q (singleton 'ε') d 0 (singleton 1)
   where q = fromList [singleton 0, singleton 1]
-        d state 'ε' = fromList [1 | findMax state == 0]
+        d state char
+          | state == singleton 0 && char == 'ε' = singleton 1
+          | otherwise = empty
 construct (Atom a) = construct' q (singleton a) d 0 (singleton 1)
   where q = fromList [singleton 0, singleton 1]
         d state char
